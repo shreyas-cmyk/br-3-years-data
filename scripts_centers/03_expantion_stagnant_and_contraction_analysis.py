@@ -5,11 +5,7 @@ import psycopg2
 # DATABASE CONNECTION
 # -------------------------------------------------
 conn = psycopg2.connect(
-    host="ep-summer-forest-ahfbduji-pooler.c-3.us-east-1.aws.neon.tech",
-    database="neondb",
-    user="neondb_owner",
-    password="npg_W3ZVLHsXn5UD",
-    sslmode="require"
+   "enter your connection link"
 )
 
 # -------------------------------------------------
