@@ -80,6 +80,3 @@ print("Total 2024:", df["2024"].sum())
 print("Total 2025:", df["2025"].sum())
 print("Total Till 2023:", df["Till 2023"].sum())
 
-# Optional Export
-# df.to_csv("industry_use_case_6.csv", index=False)
-# df.to_excel("industry_use_case_6.xlsx", index=False)
