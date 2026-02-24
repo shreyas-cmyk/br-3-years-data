@@ -121,6 +121,3 @@ print(df)
 print("\nSanity Check Totals:")
 print(df[['till_2023', 'till_2024', 'till_2025']].sum())
 
-# Optional exports
-# df.to_csv("centers_use_case_3.csv", index=False)
-# df.to_excel("centers_use_case_3.xlsx", index=False)
