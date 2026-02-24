@@ -148,5 +148,9 @@ ETL scripts to extract data from the respective Google Sheets, normalize structu
 1. **Table Creates (DDL Files):** Defined under `Miscellaneous_scripts/`. Directly translates the Google Sheets data dimensions into PostgreSQL native elements (e.g., `centers_table_create.sql`). Core logic for classifying what counts organically rests in `vw_first_center_timeline_clean.sql`.
 2. **Push Pipeline Scripts:** Defined under `Miscellaneous_python_scripts/`. Ingest pipeline designed strictly to handle authentication logic, strip bad datatypes/white spacing configurations and blindly append into Neon DB infrastructure via pandas bulk `.to_sql()`. 
 3. **Core Analytic Modules:** Folders (`accounts/`, `centers/`, `services/`) house the `psycopg2`/`sqlalchemy` mapping logic processing final cumulative aggregations and printing finalized formatted dataframes.
+4. The database currently contains:
+
+## ✅ 5 Tables  
+## ✅ 1 View
 
 ---
