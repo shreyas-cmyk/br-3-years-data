@@ -11,7 +11,7 @@ connection_string = (
 engine = create_engine(connection_string)
 
 # --------------------------------------------------
-# 2️⃣ Fetch Data (FIXED data_year type issue)
+# 2️⃣ Fetch Data
 # --------------------------------------------------
 query = """
 SELECT 
@@ -106,7 +106,7 @@ headcount_reduced = abs(
 )
 
 # --------------------------------------------------
-# 7️⃣ Print Summary (Matches Screenshot Format)
+# 7️⃣ Print Summary
 # --------------------------------------------------
 
 print("\n================ CHANGE SUMMARY (2023 → 2025) ================\n")
