@@ -1,317 +1,152 @@
-# br-3-years-data
-# GCC Analytics Database – Documentation
+# BR 3 Years Data - Project Overview
+
+## 1. Detailed Project Objective
+The central objective of this project is to support a comprehensive **3-Year GCC Ecosystem Analysis (2023–2025)** by tracking and analyzing quantitative and qualitative data around Global Capability Centers (GCCs) in India. The analytical data pipelines and scripts answer core strategic questions regarding:
+- **Determining Company GCC Entry Timeline**: Establishing exactly when an overarching account first established a GCC-type center in India.
+- **Ecosystem Growth Trends (2023–2025)**: Measuring the massive expansion in total workforce, net new accounts established, and the count of total active centers.
+- **Industry & Regional Footprint Analysis**: Tracking sector-wise and region-wise expansion to identify leading domain disruptors.
+- **Services Expansion Analysis**: Understanding functional capability scaling across service portfolios (IT, ER&D, FNA, HR, Procurement, etc.).
+
+- The system is hosted via **Neon PostgreSQL (AWS – US East 1)**.
 
 ---
 
-# 1. Database Overview
 
-This database is designed to support **3-Year GCC Ecosystem Analysis (2023–2025)** including:
-
-- Accounts Growth
-- Centers Growth & Expansion
-- Services Expansion
-- BR Data Validation
-- Entry Timeline Tracking for GCC-type Centers
-
-The database is hosted on **Neon PostgreSQL (AWS – US East 1)**.
+## 2. Defining "GCC-Type Centers"
+For all underlying analysis metrics, a rigorous definition is applied to what qualifies as an active GCC. 
+A center is classified as a "GCC-Type Center" and thus calculated in the metrics **if and only if**:
+- The explicit **status** (`status_cd`) is strictly equal to **"Active Center"**.
+- The explicit **center type classification** (`center_type_cd`) falls into one of these specific strings mathematically validated by the SQL Views:
+  - `GCC`, `GIC`, `GCC/GIC`, `SSC`, `COE`, `GBS`, `R&D`, `ENGINEERING & DESIGN`, `IT`, `ENGINEERING`.
 
 ---
 
-# 2. Database Schema Structure
+## 3. Google Sheets Reference
+The data originates primarily from three source Google Sheets workbooks which serve as the foundation of the pipeline:
+- **BR 3 Years CL Data** (Source Workbook Name)
+  - **Sheet:** `CL-BR-3Years` (Source mapped to `br_data` table)
+  - **Sheet:** `BR 2025` (Source mapped to `br_data_cons` table)
+- **CM – 3 Years CL Data** (Source Workbook Name)
+  - **Sheet:** `CL-3 Years Data` (Source mapped to `centers` table)
+  - **Sheet:** `CM-2025` (Source mapped to `centers_consolidated` table)
+- **SM – 3 Years CL Data** (Source Workbook Name)
+  - **Sheet:** `SM-3 Years Data` (Source mapped to `services` table)
+ 
 
-The database currently contains:
+All reporting pipelines follow this exact data flow architecture:
+**Google Sheets → Data Cleaning (Python/Google Sheets) → PostgreSQL Tables → Filtered Views → Analytics Queries**
 
-## ✅ 5 Tables  
-## ✅ 1 View
+| Core Google Sheets Workbook | Relevant Internal Sheet | Target PostgreSQL Table |
+|-----------------------------|-------------------------|--------------------------|
+| **CM – 3 Years CL Data** | `CL-3 Years Data` | `centers` |
+| **CM – 3 Years CL Data** | `CM-2025` | `centers_consolidated` |
+| **SM – 3 Years CL Data** | `SM-3 Years Data` | `services` |
+| **BR – 3 Years CL Data** | `CL-BR-3Years` | `br_data` |
+| **BR – 3 Years CL Data** | `BR 2025` | `br_data_cons` |
 
----
-
-# 3. Tables Overview
-
----
-
-## 3.1 `br_data`
-
-**Source Workbook:**  
-BR 3 Years CL Data, Sheet--->CL-BR-3Years
-
-**Purpose:**
-- Raw Business Registry data
-- Account validation
-- Cross-checking legal names
-- Base reference for ecosystem tracking
-
----
-
-## 3.2 `br_data_cons`
-
-**Source Workbook:**  
-BR 3 Years CL Data , Sheet--->BR 2025
-
-**Purpose:**
-- Consolidated / cleaned BR dataset
-- Standardized version for analytics
-- Used for reconciled account-level reporting
+## 3. Database Schema Mapping
+A Neon PostgreSQL Database holds all cleaned structural tables that ingest the Google Sheets data:
+- `br_data`: Contains raw business registry data and account validation details.
+- `br_data_cons`: Consolidated and cleaned BR dataset exclusively for analytical reports.
+- `centers`: Raw center-level dataset for growth, expansion, and location-based operations analysis.
+- `centers_consolidated`: Cleaned center dataset strictly for aggregated year-wise tracking.
+- `services`: Detailed tracking of service-levels and department footprints within each specific center.
+- `vw_first_center_timeline_clean` (View): Logical construct designed to dynamically calculate the 2023 vs 2024 vs 2025 GCC entry buckets.
 
 ---
 
-## 3.3 `centers`
 
-**Source Workbook:**  
-CM – 3 Years CL Data, Sheet--->CL-3 Years Data
+## 4. Mandatory Data Push & Quality Guidelines (Violation Checks)
+Before data reaches the analytical states inside the Database, standard Python Scripts extract the Google Sheets and ingest it into PostgreSQL.
 
-**Purpose:**
-- Raw center-level dataset
-- Used for:
-  - Year-wise center growth
-  - Center type analysis
-  - Entry timeline calculation
-  - City & industry analysis
-  - Expansion / contraction logic
+> [!WARNING]
+> Before pushing any data to the DB, it is **mandatory** to verify these critical constraints across all raw files. Violating these rules will instantly break database JOIN commands.
 
----
+### 4.1 Account Name Consistency
+`account_global_legal_name` must be perfectly identical across `br_data`, `centers`, and `services`.
+- Case consistency is required.
+- **No extra blank spaces** allowed at start or end.
+- All special characters must mirror each other exactly.
 
-## 3.4 `centers_consolidated`
+### 4.2 Column Name Formatting Matches
+Google Sheet columns **must mirror** database columns identically. The target names are configured inside the Python Scripts (e.g. `br_data_push_script.py` normalizing step 3 & 4).
+- Do not add random spaces or mixed casings. Follow standard PostgreSQL underscore `snake_case`.
 
-**Source Workbook:**  
-CM – 3 Years CL Data , Sheet--->CM-2025
-
-**Purpose:**
-- Cleaned / structured center dataset
-- Used for analytics-ready queries
-- Supports aggregation and reporting
+### 4.3 Clean Datatype Casting
+- Categorical `year` fields must strictly be 4 digits (Accepted: *2023, 2024, 2025*. Rejected: *23, FY23, 2023-24*).
+- Status codes such as `status_cd` or `center_type_cd` cannot have numeric artifacts.
+- Numeric `employee_count_cd` columns strictly cannot have hidden text (e.g. "5000 approx" will break the ETL).
 
 ---
 
-## 3.5 `services`
 
-**Source Workbook:**  
-SM – 3 Years CL Data, Sheet--->SM-3 Years Data
+## 5. Python & SQL Scripts Traceability & Explanation
 
-**Purpose:**
-- Service-level mapping per center
-- Used for:
-  - Services expansion analysis
-  - Year-wise % service growth
-  - Portfolio diversification tracking
-  - Center-level service intensity analysis
+### 5.1 SQL Scripts (`Miscellaneous_scripts` Folder)
+These scripts handle database table schemas and views initializations.
+- `br_data_table_create.sql`: Defines `br_data` schema mapping columns such as `account_global_legal_name`, `entry_year_of_gcc`, `hq_revenue_range`, and `nasscom_status`.
+- `br_data_cons_table_create.sql`: Similar architectural definition for the heavily filtered `br_data_cons` set.
+- `centers_table_create.sql`: Defines `centers` schema to map granular facilities tracking `center_type_cd`, `status_cd`, `inc_year_cd`, and `employee_count_cd`.
+- `centers_consolidated_table_create.sql`: Defines `centers_consolidated` schema, crucial for utilizing the `new_time_line` column.
+- `services_table_create.sql`: Defines `services` schema with specific binary flags (`it`, `erd`, `fna`, `hr`, `procurement_and_supply_chain`, `customer_services`).
+- `vw_first_center_timeline_clean.sql`: Core logic SQL computing earliest GCC entry year per `account_global_legal_name` and classifying against center categories like 'SSC', 'GBS', 'R&D', using condition blocks on `inc_year_cd`.
 
+### 5.2 Python Push Scripts (`Miscellaneous_python_scripts` Folder)
+ETL scripts to extract data from the respective Google Sheets, normalize structural column headers, strictly format datasets, and append records directly to PostgreSQL.
+- `br_data_push_script.py`: Target Table: `br_data` 
+- `br_data_cons_push_script.py`: Target Table: `br_data_cons` 
+- `centers_3y_data_push_script.py`: Target Table: `centers` 
+- `centers_cons_push_script.py`: Target Table: `centers_consolidated` 
+- `services_3y_data_push_script.py`: Target Table: `services` 
+- `Gcc_entry_year_column_push_from_view.py`: Utility to pull calculated values from the `vw` structures and standardize database entries to main br_data table.
+
+### 5.3 Accounts Growth Trends (`accounts/scripts` Folder)
+- `01_gcc_entry_timeline.py`
+  - **Objective:** Buckets existing accounts into "Till 2023", "2024", "2025" or "Upcoming".
+  - **Tables Used:** `br_data`
+  - **Columns Targeted:** `account_global_legal_name`, `entry_year_of_gcc`
+- `02_ecosystem_growth_trends.py`
+  - **Objective:** Calculates massive aggregate factors including expansion in existing workforce sizes, net new workforce editions, total cumulative center footprints, and baseline increases versus year 2023 bounds.
+  - **Tables Used:** `br_data`, `centers_consolidated`, `centers`
+  - **Columns Targeted:** `entry_year_of_gcc`, `new_time_line`, `status_cd` ('Active Center' filter), `employee_count_cd`, `data_year`
+- `03_industry_growth_analysis.py`
+  - **Objective:** Groups and tracks YoY accounts count categorized by distinct parent Industry mappings to see sectoral leadership changes.
+- `04_regional_growth_analysis.py`
+  - **Objective:** Calculates volumetric shifts split by primary Headquarter region to validate geopolitical investment originators context.
+
+### 5.4 Centers Expansion Insights (`centers/scripts` Folder)
+- `01_year_wise_center_growth.py`
+  - **Objective:** Evaluates strictly absolute center counts against timeline buckets with cumulative cumulative sums.
+  - **Tables Used:** `centers_consolidated`
+  - **Columns Targeted:** `new_time_line`, `status_cd`
+- `02_center_type_wise_growth.py`
+  - **Objective:** Analyzes the segmented structural shifts between pure R&D facilities versus conventional Shared Service Centers (SSC).
+- `03_expantion_stagnant_and_contraction_analysis.py`
+  - **Objective:** Determines which specific GCC structures grew radically vs which stagnated over 3 years.
+- `04_headcount_expantion_stagnant_and_contraction_analysis.py`
+  - **Objective:** Numeric correlation comparing 2023 absolute headcounts directly against 2025 reported metrics.
+- `05_city_wise_growth_analysis.py`
+  - **Objective:** Distributions calculating geographic footprints and Tier-1 vs Tier-2 dispersion logic. 
+- `06_industry_wise_analysis.py`
+  - **Objective:** Matrix breakdown correlating pure center-capacities by respective industry domain tagging.
+
+### 5.5 Service Offerings Tracks (`services/scripts` Folder)
+- `01_services_expansion_analysis.py`
+  - **Objective:** Iterates through boolean mapped columns to accurately identify aggregate shifts from IT-focused delivery to broad capability centers (multi-function presence).
+  - **Tables Used:** `services`
+  - **Columns Targeted:** `year`, `cn_unique_key`, `it`, `erd`, `fna`, `hr`, `procurement_and_supply_chain`, `sales_and_marketing`, `customer_services`.
+- `02_year_wise_percentage_analysis_of_services_expansion.py`
+  - **Objective:** Calculates proportional domain shifts, showing the relative acceleration of categories like ER&D comparing 2023 baselines to year 2025 totals.
+  - **Tables Used:** `services`
+  - **Columns Targeted:** `year`, `cn_unique_key`, `it`, `erd`, `fna`, `hr`, `procurement_and_supply_chain`, `sales_and_marketing`, `customer_services`.
+ 
 ---
 
-# 4. View Overview
+
+## 6. Project Architecture Component Summary
+
+1. **Table Creates (DDL Files):** Defined under `Miscellaneous_scripts/`. Directly translates the Google Sheets data dimensions into PostgreSQL native elements (e.g., `centers_table_create.sql`). Core logic for classifying what counts organically rests in `vw_first_center_timeline_clean.sql`.
+2. **Push Pipeline Scripts:** Defined under `Miscellaneous_python_scripts/`. Ingest pipeline designed strictly to handle authentication logic, strip bad datatypes/white spacing configurations and blindly append into Neon DB infrastructure via pandas bulk `.to_sql()`. 
+3. **Core Analytic Modules:** Folders (`accounts/`, `centers/`, `services/`) house the `psycopg2`/`sqlalchemy` mapping logic processing final cumulative aggregations and printing finalized formatted dataframes.
 
 ---
-
-## 4.1 `vw_first_center_timeline_clean`
-
-**Type:** Analytical View  
-
-**Purpose:**
-- Calculates first GCC-type center year per account
-- Cleans incorporation year
-- Excludes “Upcoming” where required
-- Classifies entry year into:
-  - 2023
-  - 2024
-  - 2025
-  - Upcoming
-
-This view supports:
-
-- GCC Entry Timeline PRD
-- Year-wise ecosystem growth tracking
-- First center classification logic
-
-## SQL Logic Used
-
-
-CREATE OR REPLACE VIEW
-  "public"."vw_first_center_timeline_clean" AS
-WITH
-  base AS (
-    SELECT
-      centers.account_global_legal_name,
-      centers.center_type_cd,
-      centers.status_cd,
-      centers.inc_year_cd,
-      CASE
-        WHEN centers.inc_year_cd ~ '^\d{4}$'::text THEN centers.inc_year_cd::integer
-        ELSE NULL::integer
-      END AS inc_year_int
-    FROM
-      centers
-  ),
-  gcc_first AS (
-    SELECT
-      base.account_global_legal_name,
-      min(base.inc_year_int) AS first_gcc_year
-    FROM
-      base
-    WHERE
-      (
-        upper(
-          TRIM(
-            BOTH
-            FROM
-              base.center_type_cd
-          )
-        ) = ANY (
-          ARRAY[
-            'GCC',
-            'GIC',
-            'GCC/GIC',
-            'SSC',
-            'COE',
-            'GBS',
-            'R&D',
-            'ENGINEERING & DESIGN',
-            'IT',
-            'ENGINEERING'
-          ]
-        )
-      )
-      AND base.inc_year_int IS NOT NULL
-      AND base.status_cd <> 'Upcoming'
-    GROUP BY
-      base.account_global_legal_name
-  ),
-  non_gcc_first AS (
-    SELECT
-      base.account_global_legal_name,
-      min(base.inc_year_int) AS first_non_gcc_year
-    FROM
-      base
-    WHERE
-      base.inc_year_int IS NOT NULL
-      AND base.status_cd <> 'Upcoming'
-    GROUP BY
-      base.account_global_legal_name
-  ),
-  final_base AS (
-    SELECT
-      b.account_global_legal_name,
-      b.center_type_cd,
-      b.status_cd,
-      b.inc_year_cd,
-      COALESCE(g.first_gcc_year, n.first_non_gcc_year) AS first_center_timeline_int
-    FROM
-      base b
-      LEFT JOIN gcc_first g ON b.account_global_legal_name = g.account_global_legal_name
-      LEFT JOIN non_gcc_first n ON b.account_global_legal_name = n.account_global_legal_name
-  )
-SELECT
-  account_global_legal_name,
-  inc_year_cd AS incorporation_year,
-  center_type_cd,
-  status_cd,
-  COALESCE(first_center_timeline_int::text, 'Upcoming') AS first_center_timeline,
-  CASE
-    WHEN first_center_timeline_int IS NULL THEN 'Upcoming'
-    WHEN first_center_timeline_int <= 2023 THEN '2023'
-    WHEN first_center_timeline_int = 2024 THEN '2024'
-    WHEN first_center_timeline_int = 2025 THEN '2025'
-    ELSE 'Upcoming'
-  END AS entry_year_of_gcc_type_center
-FROM
-  final_base;
-
----
-
-# 5. Data Source Architecture
-
-All tables are populated from Google Sheets workbooks.
-
-| Workbook Name | Database Tables |
-|---------------|-----------------|
-| CM – 3 Years CL Data | centers, centers_consolidated |
-| SM – 3 Years CL Data | services |
-| BR – 3 Years CL Data | br_data, br_data_cons |
-
-Data Flow:
-
-Google Sheets → Data Cleaning → PostgreSQL Tables → Views → Analytics Queries
-
----
-
-# 6. Critical Data Push Guidelines (Mandatory Before Upload)
-
-Before pushing data from Google Sheets into PostgreSQL:
-
----
-
-## 6.1 Account Name Consistency
-
-Ensure `account_global_legal_name` is:
-
-- Spelled exactly the same across:
-  - br_data
-  - centers
-  - services
-- Case consistent
-- No extra spaces
-- Special characters match exactly
-
-Even minor variations will break joins.
-
----
-
-## 6.2 Column Name Matching
-
-Column names in Google Sheets MUST match table columns exactly:
-
-- Same spelling
-- Same underscore format
-- Same casing
-- No trailing spaces
-
-Mismatch will cause:
-- Insert errors
-- Join failures
-- Analytics inconsistencies
-
----
-
-## 6.3 Data Type Validation
-
-Before push:
-
-- Integer columns must contain only numeric values
-- Year columns must be 4-digit numeric
-- No mixed data types
-- NULL values handled properly
-- Text fields should not contain numeric artifacts
-
-Especially validate:
-
-- inc_year_cd
-- status_cd
-- center_type_cd
-
----
-
-## 6.4 Year Format Standardization
-
-Allowed:
-
-2023
-2024
-2025
-
-
-Not allowed:
-
-23
-FY23
-2023-24
-TBD
-
-
----
-
-# 7. Owner
-
-Database created for:
-
-**GCC Ecosystem 3-Year Analytics (2023–2025)**
-
-Maintained for analytical and strategic reporting purposes.
