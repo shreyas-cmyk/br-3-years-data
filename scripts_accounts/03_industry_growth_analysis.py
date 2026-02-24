@@ -123,13 +123,4 @@ print(filtered_df)
 print("\n--- PERCENTAGE SHARE OUTPUT ---\n")
 print(percent_df)
 
-# -------------------------------------------------
-# 7️⃣ EXPORT TO EXCEL
-# -------------------------------------------------
-with pd.ExcelWriter("UseCase3_BR_Data.xlsx") as writer:
-    df.to_excel(writer, sheet_name="Full Category Data", index=False)
-    filtered_df.to_excel(writer, sheet_name="Top Categories", index=False)
-    percent_df.to_excel(writer, sheet_name="Percentage Share", index=False)
-
-print("\nExcel file saved as UseCase3_BR_Data.xlsx")
 
