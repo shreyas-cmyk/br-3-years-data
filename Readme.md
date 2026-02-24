@@ -308,33 +308,6 @@ TBD
 
 ---
 
-# 7. Analytical Coverage Supported by This Schema
-
-The database supports:
-
-- Year-wise Center Growth
-- Center Type-wise Growth
-- Expansion / Stagnation / Contraction Analysis
-- Headcount Extension Analysis
-- Tier 1 vs Tier 2 City Growth
-- Industry-wise Analysis
-- Services Expansion
-- Year-wise % Services Growth
-- GCC Entry Timeline Classification
-
----
-
-# 8. Governance Best Practices
-
-- Always validate row counts before and after data push
-- Never push partially cleaned sheets
-- Maintain version control of Google Sheets
-- Use staging approach for major refresh
-- Avoid manual production table edits
-- Document any schema changes
-
----
-
 # 9. Owner
 
 Database created for:
