@@ -87,10 +87,4 @@ df = pd.concat([df, pd.DataFrame([grand_total])], ignore_index=True)
 print("\nUse Case 4 Output:\n")
 print(df)
 
-# -------------------------------------------------
-# 6️⃣ OPTIONAL: EXPORT TO EXCEL
-# -------------------------------------------------
-df.to_excel("UseCase4_BR_Data.xlsx", index=False)
-
-print("\nExcel file saved as UseCase4_BR_Data.xlsx")
 
